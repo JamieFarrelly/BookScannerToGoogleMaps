@@ -19,50 +19,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-widt
 <input id="words" placeholder="///filled.count.soap" autocomplete="off" spellcheck="false">
 <button id="openBtn" type="button" disabled>Open in Google Maps</button>
 </div>
-<div class="card"><div class="result" id="result">No address yet</div><p class="hint">On iPhone, camera access must be allowed for this website. If prompted, tap <b>Allow</b>.</p></div>
+<div class="card"><div class="result" id="result">No address yet</div><p class="hint">On iPhone, hold the three words inside the camera view and make them large and sharp. OCR runs in your browser.</p></div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-(function(){
-'use strict';
+(function(){'use strict';
 const video=document.getElementById('video'),startBtn=document.getElementById('startBtn'),scanBtn=document.getElementById('scanBtn'),openBtn=document.getElementById('openBtn'),input=document.getElementById('words'),result=document.getElementById('result'),status=document.getElementById('status');
-let stream=null,worker=null;
-function setStatus(message,error){status.textContent=message;status.className=error?'status error':'status';}
-function normalise(text){
- text=(text||'').toLowerCase().replace(/[’'`]/g,'').replace(/[^a-z.\s/_-]/g,' ');
- let m=text.match(/(?:\/\/\/)?([a-z-]+)\.([a-z-]+)\.([a-z-]+)/i);
- if(m)return '///'+m[1]+'.'+m[2]+'.'+m[3];
- const ws=text.match(/[a-z-]+/gi);if(!ws)return null;
- for(let i=0;i<=ws.length-3;i++)if(ws[i].length>1&&ws[i+1].length>1&&ws[i+2].length>1)return '///'+ws[i]+'.'+ws[i+1]+'.'+ws[i+2];
- return null;
-}
-function setAddress(a){input.value=a;result.textContent=a;openBtn.disabled=false;}
-startBtn.addEventListener('click',async function(){
- if(!window.isSecureContext){setStatus('Camera requires HTTPS. Please use the GitHub Pages https:// address.',true);return;}
- if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('This browser does not expose camera access. Open the site directly in Safari or Chrome.',true);return;}
- startBtn.disabled=true;setStatus('Requesting camera permission…');
- try{
-  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
-  video.srcObject=stream;
-  await video.play();
-  scanBtn.disabled=false;
-  startBtn.textContent='✓ Camera open';
-  setStatus('Camera ready. Point it at the what3words address.');
- }catch(err){
-  console.error(err);startBtn.disabled=false;
-  if(err.name==='NotAllowedError')setStatus('Camera permission was denied. On iPhone go to Settings → Safari → Camera and allow it, then reload this page.',true);
-  else if(err.name==='NotFoundError')setStatus('No camera was found on this device.',true);
-  else setStatus('Could not open the camera ('+(err.name||'unknown error')+'). Try opening this page directly in Safari.',true);
- }
-});
-scanBtn.addEventListener('click',async function(){
- if(!stream)return;scanBtn.disabled=true;setStatus('Reading camera image…');
- const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
- try{if(!worker){setStatus('Loading OCR engine…');worker=await Tesseract.createWorker('eng');}const r=await worker.recognize(canvas);const a=normalise(r.data.text);if(a){setAddress(a);setStatus('Found a possible address. Check it before opening Maps.');}else setStatus('No three-word address found. Move closer and try again.');}catch(e){console.error(e);setStatus('OCR failed. You can type the three words manually.',true);}finally{scanBtn.disabled=false;}
-});
-input.addEventListener('input',function(){const a=normalise(input.value);if(a)setAddress(a);else{openBtn.disabled=true;result.textContent='No address yet';}});
-openBtn.addEventListener('click',function(){const a=normalise(input.value);if(a)window.location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);});
-window.addEventListener('pagehide',function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});if(worker)worker.terminate();});
+function setStatus(m,e){status.textContent=m;status.className=e?'status error':'status'}
+function normalise(t){t=(t||'').toLowerCase().replace(/[’'`]/g,'').replace(/[|]/g,'i').replace(/[^a-z.\s/_-]/g,' ').replace(/\s+/g,' ').trim();let m=t.match(/(?:\/\s*\/\s*\/\s*)?([a-z-]+)\s*\.\s*([a-z-]+)\s*\.\s*([a-z-]+)/i);if(m)return'///'+m[1]+'.'+m[2]+'.'+m[3];const w=t.match(/[a-z-]+/g)||[];for(let i=0;i<=w.length-3;i++){let x=w.slice(i,i+3);if(x.every(a=>a.length>=2&&a.length<=20))return'///'+x.join('.')}return null}
+startBtn.addEventListener('click',async function(){if(!window.isSecureContext){setStatus('Camera requires the HTTPS GitHub Pages address.',true);return}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('Open this page directly in Safari or Chrome.',true);return}startBtn.disabled=true;setStatus('Requesting camera permission…');try{const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;await video.play();scanBtn.disabled=false;startBtn.textContent='✓ Camera open';setStatus('Camera ready. Fill the view with the three words, then tap Scan camera.')}catch(err){startBtn.disabled=false;if(err.name==='NotAllowedError')setStatus('Camera permission was denied. Go to Settings → Safari → Camera and allow access, then reload.',true);else setStatus('Could not open the camera ('+(err.name||'unknown')+').',true)}});
+input.addEventListener('input',function(){const a=normalise(input.value);if(a){input.value=a;result.textContent=a;openBtn.disabled=false}else{openBtn.disabled=true;result.textContent='No address yet'}});
+openBtn.addEventListener('click',function(){const a=normalise(input.value);if(a)window.location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a)});
 })();
 </script>
+<script src="scanner.js"></script>
 </body>
 </html>
