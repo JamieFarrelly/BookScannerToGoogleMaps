@@ -9,25 +9,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-widt
 </head>
 <body>
 <h1>what3words Scanner</h1>
-<p>Point your iPhone camera at a what3words address such as <b>///filled.count.soap</b>.</p>
+<p>Point your iPhone camera at a what3words address such as <b>///seated.remote.unwell;</b>.</p>
 <div class="card">
 <video id="video" autoplay muted playsinline webkit-playsinline></video>
 <button id="startBtn" type="button">📷 Open camera</button>
 <button id="scanBtn" class="secondary" type="button" disabled>Scan camera</button>
 <p id="status" class="status">Camera is off.</p>
 <label for="words">Detected / enter what3words address</label>
-<input id="words" placeholder="///filled.count.soap" autocomplete="off" spellcheck="false">
+<input id="words" placeholder="///seated.remote.unwell;" autocomplete="off" spellcheck="false">
 <button id="openBtn" type="button" disabled>Open in Google Maps</button>
 </div>
-<div class="card"><div class="result" id="result">No address yet</div><p class="hint">On iPhone, hold the three words inside the camera view and make them large and sharp. OCR runs in your browser.</p></div>
+<div class="card"><div class="result" id="result">No address yet</div><p class="hint">Hold the three words inside the camera view and make them large and sharp. The scanner accepts the normal format <b>///word.word.word;</b>.</p></div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 (function(){'use strict';
 const video=document.getElementById('video'),startBtn=document.getElementById('startBtn'),scanBtn=document.getElementById('scanBtn'),openBtn=document.getElementById('openBtn'),input=document.getElementById('words'),result=document.getElementById('result'),status=document.getElementById('status');
 function setStatus(m,e){status.textContent=m;status.className=e?'status error':'status'}
-function normalise(t){t=(t||'').toLowerCase().replace(/[’'`]/g,'').replace(/[|]/g,'i').replace(/[^a-z.\s/_-]/g,' ').replace(/\s+/g,' ').trim();let m=t.match(/(?:\/\s*\/\s*\/\s*)?([a-z-]+)\s*\.\s*([a-z-]+)\s*\.\s*([a-z-]+)/i);if(m)return'///'+m[1]+'.'+m[2]+'.'+m[3];const w=t.match(/[a-z-]+/g)||[];for(let i=0;i<=w.length-3;i++){let x=w.slice(i,i+3);if(x.every(a=>a.length>=2&&a.length<=20))return'///'+x.join('.')}return null}
+function normalise(t){t=(t||'').toLowerCase().replace(/[’'`]/g,'').replace(/[|]/g,'i').replace(/[^a-z.;\s/_-]/g,' ').replace(/\s+/g,' ').trim();let m=t.match(/(?:\/\s*\/\s*\/\s*)?([a-z-]+)\s*\.\s*([a-z-]+)\s*\.\s*([a-z-]+)(?:\s*;)?/i);return m?'///'+m[1]+'.'+m[2]+'.'+m[3]:null}
 startBtn.addEventListener('click',async function(){if(!window.isSecureContext){setStatus('Camera requires the HTTPS GitHub Pages address.',true);return}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('Open this page directly in Safari or Chrome.',true);return}startBtn.disabled=true;setStatus('Requesting camera permission…');try{const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;await video.play();scanBtn.disabled=false;startBtn.textContent='✓ Camera open';setStatus('Camera ready. Fill the view with the three words, then tap Scan camera.')}catch(err){startBtn.disabled=false;if(err.name==='NotAllowedError')setStatus('Camera permission was denied. Go to Settings → Safari → Camera and allow access, then reload.',true);else setStatus('Could not open the camera ('+(err.name||'unknown')+').',true)}});
-input.addEventListener('input',function(){const a=normalise(input.value);if(a){input.value=a;result.textContent=a;openBtn.disabled=false}else{openBtn.disabled=true;result.textContent='No address yet'}});
+input.addEventListener('input',function(){const a=normalise(input.value);if(a){input.value=a;result.textContent=a+';';openBtn.disabled=false}else{openBtn.disabled=true;result.textContent='No address yet'}});
 openBtn.addEventListener('click',function(){const a=normalise(input.value);if(a)window.location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a)});
 })();
 </script>
