@@ -1,61 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>what3words Scanner</title>
 <style>
-:root{color-scheme:light dark}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:760px;margin:0 auto;padding:20px;background:#111;color:#fff}h1{margin-bottom:6px}p{color:#bbb}.card{background:#1d1d1d;border:1px solid #333;border-radius:16px;padding:16px;margin:16px 0}video{width:100%;min-height:240px;border-radius:12px;background:#000;display:block;object-fit:cover}canvas{display:none}button,input{width:100%;box-sizing:border-box;padding:13px 15px;margin-top:10px;border-radius:10px;border:1px solid #555;font-size:16px}button{cursor:pointer;border:0;background:#fff;color:#111;font-weight:700}button.secondary{background:#333;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}.result{font-size:24px;font-weight:700;text-align:center;padding:14px;background:#292929;border-radius:10px;word-break:break-word}.status{min-height:44px;color:#bbb}.error{color:#ffb4b4}.hint{font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:720px;margin:0 auto;padding:20px;background:#111;color:#fff}h1{margin:0 0 6px}p{color:#bbb}.card{background:#1d1d1d;border:1px solid #333;border-radius:16px;padding:16px;margin:16px 0}video{width:100%;min-height:260px;object-fit:cover;border-radius:12px;background:#000;display:block}button,input{width:100%;box-sizing:border-box;padding:14px 15px;margin-top:10px;border-radius:10px;border:1px solid #555;font-size:17px}button{cursor:pointer;border:0;background:#fff;color:#111;font-weight:700}button.secondary{background:#333;color:#fff}button:disabled{opacity:.45}.status{min-height:24px}.result{font-size:24px;font-weight:700;text-align:center;padding:14px;background:#292929;border-radius:10px;word-break:break-word}.error{color:#ff9b9b}.hint{font-size:14px}
 </style>
 </head>
 <body>
 <h1>what3words Scanner</h1>
-<p>Point your camera at a what3words address such as <b>///filled.count.soap</b>.</p>
+<p>Point your iPhone camera at a what3words address such as <b>///filled.count.soap</b>.</p>
 <div class="card">
-<video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
-<button id="startBtn" type="button">Open camera</button>
+<video id="video" autoplay muted playsinline webkit-playsinline></video>
+<button id="startBtn" type="button">📷 Open camera</button>
 <button id="scanBtn" class="secondary" type="button" disabled>Scan camera</button>
 <p id="status" class="status">Camera is off.</p>
 <label for="words">Detected / enter what3words address</label>
 <input id="words" placeholder="///filled.count.soap" autocomplete="off" spellcheck="false">
 <button id="openBtn" type="button" disabled>Open in Google Maps</button>
 </div>
-<div class="card"><div class="result" id="result">No address yet</div><p class="hint">Camera access requires HTTPS and permission from your browser. OCR runs in your browser.</p></div>
+<div class="card"><div class="result" id="result">No address yet</div><p class="hint">On iPhone, camera access must be allowed for this website. If prompted, tap <b>Allow</b>.</p></div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-(() => {
-  const $=id=>document.getElementById(id);
-  const video=$('video'),canvas=$('canvas'),startBtn=$('startBtn'),scanBtn=$('scanBtn'),openBtn=$('openBtn'),wordsInput=$('words'),result=$('result'),status=$('status');
-  let stream=null,worker=null;
-  const setStatus=(message,error=false)=>{status.textContent=message;status.className=error?'status error':'status';};
-  function normalise(text){
-    text=text.toLowerCase().replace(/[’'`]/g,'').replace(/[^a-z.\s/_-]/g,' ');
-    const m=text.match(/(?:\/\/\/)?([a-z-]+)\.([a-z-]+)\.([a-z-]+)/i);
-    if(m)return `///${m[1]}.${m[2]}.${m[3]}`;
-    const ws=text.match(/[a-z-]+/gi);if(!ws)return null;
-    for(let i=0;i<=ws.length-3;i++)if(ws[i].length>1&&ws[i+1].length>1&&ws[i+2].length>1)return `///${ws[i]}.${ws[i+1]}.${ws[i+2]}`;
-    return null;
-  }
-  function setAddress(a){if(!a)return;wordsInput.value=a;result.textContent=a;openBtn.disabled=false;}
-  startBtn.addEventListener('click',async()=>{
-    setStatus('Requesting camera permission…');startBtn.disabled=true;
-    try{
-      if(!window.isSecureContext){throw new Error('This page is not running in a secure context. Open the GitHub Pages HTTPS address, not an http:// address.');}
-      if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){throw new Error('This browser does not provide camera access. Try Safari or Chrome on your phone.');}
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-      video.srcObject=stream;await video.play();scanBtn.disabled=false;setStatus('Camera ready. Point it at the what3words address.');
-    }catch(e){console.error(e);startBtn.disabled=false;let msg=e&&e.message?e.message:'Camera permission was blocked.';if(e&&e.name==='NotAllowedError')msg='Camera permission was denied. Allow camera access for this site in your browser settings, then tap Open camera again.';if(e&&e.name==='NotFoundError')msg='No camera was found on this device.';setStatus(msg,true);}
-  });
-  scanBtn.addEventListener('click',async()=>{
-    if(!stream)return;scanBtn.disabled=true;setStatus('Reading the camera image…');
-    if(!video.videoWidth){setStatus('Camera is not ready yet. Try again in a moment.',true);scanBtn.disabled=false;return;}
-    canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-    try{if(!worker){setStatus('Loading OCR engine…');worker=await Tesseract.createWorker('eng');}const {data:{text}}=await worker.recognize(canvas);const address=normalise(text);if(address){setAddress(address);setStatus('Found a possible what3words address. Check it before opening Maps.');}else setStatus('No three-word address found. Move closer, improve lighting, and try again.');}
-    catch(e){console.error(e);setStatus('OCR failed. You can type the three words manually.',true);}finally{scanBtn.disabled=false;}
-  });
-  wordsInput.addEventListener('input',()=>{const a=normalise(wordsInput.value);if(a)setAddress(a);else{openBtn.disabled=true;result.textContent='No address yet';}});
-  openBtn.addEventListener('click',()=>{const a=normalise(wordsInput.value);if(a)window.location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);});
-  window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();});
+(function(){
+'use strict';
+const video=document.getElementById('video'),startBtn=document.getElementById('startBtn'),scanBtn=document.getElementById('scanBtn'),openBtn=document.getElementById('openBtn'),input=document.getElementById('words'),result=document.getElementById('result'),status=document.getElementById('status');
+let stream=null,worker=null;
+function setStatus(message,error){status.textContent=message;status.className=error?'status error':'status';}
+function normalise(text){
+ text=(text||'').toLowerCase().replace(/[’'`]/g,'').replace(/[^a-z.\s/_-]/g,' ');
+ let m=text.match(/(?:\/\/\/)?([a-z-]+)\.([a-z-]+)\.([a-z-]+)/i);
+ if(m)return '///'+m[1]+'.'+m[2]+'.'+m[3];
+ const ws=text.match(/[a-z-]+/gi);if(!ws)return null;
+ for(let i=0;i<=ws.length-3;i++)if(ws[i].length>1&&ws[i+1].length>1&&ws[i+2].length>1)return '///'+ws[i]+'.'+ws[i+1]+'.'+ws[i+2];
+ return null;
+}
+function setAddress(a){input.value=a;result.textContent=a;openBtn.disabled=false;}
+startBtn.addEventListener('click',async function(){
+ if(!window.isSecureContext){setStatus('Camera requires HTTPS. Please use the GitHub Pages https:// address.',true);return;}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('This browser does not expose camera access. Open the site directly in Safari or Chrome.',true);return;}
+ startBtn.disabled=true;setStatus('Requesting camera permission…');
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
+  video.srcObject=stream;
+  await video.play();
+  scanBtn.disabled=false;
+  startBtn.textContent='✓ Camera open';
+  setStatus('Camera ready. Point it at the what3words address.');
+ }catch(err){
+  console.error(err);startBtn.disabled=false;
+  if(err.name==='NotAllowedError')setStatus('Camera permission was denied. On iPhone go to Settings → Safari → Camera and allow it, then reload this page.',true);
+  else if(err.name==='NotFoundError')setStatus('No camera was found on this device.',true);
+  else setStatus('Could not open the camera ('+(err.name||'unknown error')+'). Try opening this page directly in Safari.',true);
+ }
+});
+scanBtn.addEventListener('click',async function(){
+ if(!stream)return;scanBtn.disabled=true;setStatus('Reading camera image…');
+ const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+ try{if(!worker){setStatus('Loading OCR engine…');worker=await Tesseract.createWorker('eng');}const r=await worker.recognize(canvas);const a=normalise(r.data.text);if(a){setAddress(a);setStatus('Found a possible address. Check it before opening Maps.');}else setStatus('No three-word address found. Move closer and try again.');}catch(e){console.error(e);setStatus('OCR failed. You can type the three words manually.',true);}finally{scanBtn.disabled=false;}
+});
+input.addEventListener('input',function(){const a=normalise(input.value);if(a)setAddress(a);else{openBtn.disabled=true;result.textContent='No address yet';}});
+openBtn.addEventListener('click',function(){const a=normalise(input.value);if(a)window.location.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a);});
+window.addEventListener('pagehide',function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});if(worker)worker.terminate();});
 })();
 </script>
 </body>
